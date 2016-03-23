@@ -1,13 +1,12 @@
-# json.bash - JSON Loader/Dumper for Bash
-#
+# json.bash - JSON Loader/Dumper for Bash #
 # Copyright (c) 2013-2016 Ingy döt Net
 
-JSON_VERSION=0.0.2
+JSON_BASH_VERSION=0.0.2
 
 #-----------------------------------------------------------------------------
 # API functions
 #-----------------------------------------------------------------------------
-JSON.load() {
+json.load() {
   unset JSON__cache
   case $# in
     0) (set -o pipefail; JSON.lex | JSON.parse) ;;
@@ -22,7 +21,7 @@ JSON.load() {
   :
 }
 
-JSON.dump() {
+json.dump() {
   JSON.die 'JSON.dump not yet implemented.'
   set -o pipefail
   case $# in
@@ -33,14 +32,14 @@ JSON.dump() {
       if [[ $1 == '-' ]]; then
         echo "$JSON__cache" | JSON.dump-json
       else
-        echo ${!1} | JSON.dump-json
+        echo "${!1}" | JSON.dump-json
       fi
       ;;
     *) JSON.die 'Usage: JSON.dump [<tree-var>]' ;;
   esac
 }
 
-JSON.get() {
+json.get() {
   local flag=""
   if [[ $# -gt 0 && $1 =~ ^-([asnbz])$ ]]; then
     flag="${BASH_REMATCH[1]}"
@@ -68,7 +67,7 @@ JSON.get() {
   esac
 }
 
-JSON.keys() {
+json.keys() {
   if [[ $# -gt 2 ]]; then
     JSON.die 'Usage: JSON.keys <key-path> [<tree-var>]'
   fi
@@ -78,7 +77,7 @@ JSON.keys() {
     sort -u
 }
 
-JSON.object() {
+json.object() {
   case $# in
     1)
       JSON._object "$@"
@@ -95,7 +94,7 @@ JSON.object() {
   esac
 }
 
-JSON._object() {
+json._object() {
   local key=$1
   if [[ -n $key && $key != "/" ]]; then
     key=${key//\//\\/}
@@ -105,7 +104,7 @@ JSON._object() {
   fi
 }
 
-JSON.put() {
+json.put() {
   set -o pipefail
   if [[ $# -gt 0 && $1 =~ ^-([snbz])$ ]]; then
     local flag="${BASH_REMATCH[1]}"
@@ -114,22 +113,22 @@ JSON.put() {
   case $# in
     2)
       JSON.del "$1"
-      printf "$1\t$2\n"
+      printf "%s\t%s\n" "$1" "$2"
       ;;
     3)
       if [[ $1 == '-' ]]; then
         echo "$JSON__cache" | JSON.del "$1"
-        printf "$1\t$2\n"
+        printf "%s\t%s\n" "$1" "$2"
       else
-        echo ${!3} | JSON.del "$1"
-        printf "$1\t$2\n"
+        echo "${!3}" | JSON.del "$1"
+        printf "%s\t%s\n" "$1" "$2"
       fi
       ;;
     *) JSON.die 'Usage: JSON.put [-s|-n|-b|-z] <key-path> <new-value> [<tree-var>]' ;;
   esac
 }
 
-JSON.del() {
+json.del() {
   set -o pipefail
   case $# in
     1)
@@ -139,14 +138,14 @@ JSON.del() {
       if [[ $1 == '-' ]]; then
         echo "$JSON__cache" | grep -Ev "$1	"
       else
-        echo ${!1} | grep -Ev "$1	"
+        echo "${!1}" | grep -Ev "$1	"
       fi
       ;;
     *) JSON.die 'Usage: JSON.get [-s|-n|-b|-z] <key-path> [<tree-var>]' ;;
   esac
 }
 
-JSON.cache() {
+json.cache() {
   case $# in
     0)
       echo -n "$JSON__cache"
@@ -170,12 +169,12 @@ JSON_OTHER='.'
 JSON_SCALAR="^($JSON_STR|$JSON_NUM|$JSON_BOOL)$"
 JSON_TOKEN="$JSON_STR|$JSON_NUM|$JSON_BOOL|$JSON_PUNCT|$JSON_SPACE|$JSON_OTHER"
 
-JSON.lex() {
+json.lex() {
   local GREP_COLORS GREP_COLOR
   \grep -Eo "$JSON_TOKEN" | \grep -Ev "^$JSON_SPACE$"
 }
 
-JSON.parse() {
+json.parse() {
   read -r JSON_token
   case "$JSON_token" in
     '{') JSON.parse-object '' ;;
@@ -184,7 +183,7 @@ JSON.parse() {
   esac
 }
 
-JSON.parse-object() {
+json.parse-object() {
   read -r JSON_token
   while [[ $JSON_token != '}' ]]; do
     [[ $JSON_token =~ ^\" ]] || JSON.parse-error STRING   #"
@@ -202,7 +201,7 @@ JSON.parse-object() {
   done
 }
 
-JSON.parse-array() {
+json.parse-array() {
   local index=0
   read -r JSON_token
   while [[ $JSON_token != ']' ]]; do
@@ -216,7 +215,7 @@ JSON.parse-array() {
   done
 }
 
-JSON.parse-value() {
+json.parse-value() {
   case "$JSON_token" in
     '[') JSON.parse-array "$1";;
     '{') JSON.parse-object "$1";;
@@ -227,13 +226,13 @@ JSON.parse-value() {
   esac
 }
 
-JSON.parse-error() {
+json.parse-error() {
   msg="JSON.parse error. Unexpected token: '$JSON_token'."
   [[ -n $1 ]] && msg+=" Expected: $1."
   JSON.die "$msg"
 }
 
-JSON.apply-get-flag() {
+json.apply-get-flag() {
   local value
   read -r value
   # For now assume null can show up instead of string or number
@@ -265,7 +264,7 @@ JSON.apply-get-flag() {
         echo "JSON.get -b flag used but '$value' is not a boolean" >&2
         return 1
       }
-      value=$([ $value == true ] && echo "0" || echo "1")
+      value=$([ "$value" == true ] && echo "0" || echo "1")
       ;;
     z)
       [[ $value =~ ^$JSON_NULL$ ]] || {
@@ -280,11 +279,12 @@ JSON.apply-get-flag() {
   return 0
 }
 
-JSON.assert-cache() {
+json.assert-cache() {
   [[ -n $JSON__cache ]] || JSON.die 'JSON.get error: no cached data.'
 }
 
-JSON.die() {
+json.die() {
   echo "$*" >&2
   exit 1
 }
+
